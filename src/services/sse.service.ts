@@ -1,4 +1,4 @@
-import { PassThrough, Readable } from 'stream';
+import { Readable } from 'stream';
 import { Context } from 'koa';
 import EventEmitter from 'events';
 import SseMapper from '../mapper/sse.mapper';
@@ -14,31 +14,15 @@ class SseService {
     this.sseMapper = new SseMapper();
   }
 
-  async registerClient(token: string, ctx: Context): Promise<void> {
+  async registerClient(token: string, readStream: Readable, ctx: Context): Promise<void> {
     SseService.configureHeadersNotExpires(ctx);
 
-    const stream = new PassThrough();
-    const readStream = new Readable();
-
-    // eslint-disable-next-line no-underscore-dangle
-    readStream._read = () => {
-    };
-
-    ctx.body = readStream.pipe(stream, { end: false });
-
-    const newClient = { id: token, readStream };
-    this.sseMapper.push(newClient);
-
-    this.emitter.on('newFact', (fact) => {
-      const currentClient = this.sseMapper.find(fact.clientId);
-
-      if (currentClient && fact.clientId === currentClient.id) {
-        const { readStream } = currentClient;
-
-        readStream.push(`data: ${JSON.stringify(fact.fact)}\n\n`);
-        this.sseMapper.delete(fact.clientId);
-      }
+    await this.sseMapper.save({
+      // @ts-ignore
+      token,
+      readStream,
     });
+    await this.configureEventEmmiter();
   }
 
   private static configureHeadersNotExpires(ctx: Context): void {
@@ -50,6 +34,23 @@ class SseService {
       'Content-Type': 'text/event-stream',
       Connection: 'keep-alive',
       'Cache-Control': 'no-cache',
+    });
+  }
+
+  private async configureEventEmmiter() {
+    this.emitter.on('newFact', async (fact) => {
+      const currentClient = await this.sseMapper.find(fact.clientId);
+
+      if (!currentClient) {
+        return;
+      }
+
+      if (fact.clientId === currentClient.id) {
+        const { readStream } = currentClient;
+
+        readStream.push(`data: ${JSON.stringify(fact.fact)}\n\n`);
+        await this.sseMapper.delete(fact.clientId);
+      }
     });
   }
 
