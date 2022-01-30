@@ -1,0 +1,26 @@
+{
+  "name": "event-emitter",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "@types/koa-cors": "^0.0.2",
+    "cors": "^2.8.5",
+    "express": "^4.17.2",
+    "koa": "^2.13.4",
+    "koa-body": "^4.2.0",
+    "koa-combine-routers": "^4.0.2",
+    "koa-cors": "^0.0.16",
+    "koa-helmet": "^6.1.0",
+    "koa-router": "^10.1.1",
+    "koa-sse-stream": "^0.2.0",
+    "koa-stream": "^0.2.0",
+    "sucrase": "^3.20.3"
+  },
+  "devDependencies": {
+    "@types/typescript": "^2.0.0",
+    "ts-node": "^10.4.0",
+    "ts-node-dev": "^1.1.8",
+    "typescript": "^4.5.5"
+  }
+}
