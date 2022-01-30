@@ -18,9 +18,9 @@ class SseRoute implements SseInterfaceConstructor {
   }
 
   public routes() {
-    this.router.post(
+    this.router.get(
       'Register user by token',
-      '/register/:token',
+      '/:token',
       this.controller.register.bind(this.controller),
     );
 
