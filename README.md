@@ -2,7 +2,7 @@
 
 ## Description
 
-O projeto SSE Koa é um projeto de NodeJS que utiliza o evento `message` do SSE para enviar mensagens para os clientes.
+Este projeto foi feito usando NodeJS/Koa. E utiliza o evento `message` do SSE para enviar mensagens para os clientes.
 
 ## Routes
 
