@@ -1,58 +1,70 @@
-import {PassThrough, Readable} from "stream";
-import {Context} from "koa";
+import { PassThrough, Readable } from 'stream';
+import { Context } from 'koa';
+import EventEmitter from 'events';
 
 class SseService {
-    async registerClient(token: string, ctx: Context): Promise<void> {
-        ctx.request.socket.setTimeout(0);
-        ctx.req.socket.setNoDelay(true);
-        ctx.req.socket.setKeepAlive(true);
+  private emitter: EventEmitter;
 
-        ctx.set({
-            'Content-Type': 'text/event-stream',
-            'Connection': 'keep-alive',
-            'Cache-Control': 'no-cache'
-        })
+  constructor() {
+    this.emitter = new EventEmitter();
+    this.emitter.setMaxListeners(0);
+  }
 
-        const stream = new PassThrough();
-        const readStream = new Readable();
+  async registerClient(token: string, ctx: Context): Promise<void> {
+    this.configureHeadersNotExpires(ctx);
 
-        readStream._read = () => {
-        };
+    const stream = new PassThrough();
+    const readStream = new Readable();
 
-        ctx.body = readStream
-            .pipe(stream, {end: false});
+    // eslint-disable-next-line no-underscore-dangle
+    readStream._read = () => {
+    };
 
-        const newClient = {id: token, readStream};
-        this.clients.push(newClient);
+    ctx.body = readStream
+      .pipe(stream, { end: false });
 
-        this.emitter.on('newFact', (fact) => {
-            const currentClient = this.clients.find((client) => client.id === fact.clientId);
+    const newClient = { id: token, readStream };
+    this.clients.push(newClient);
 
-            if (currentClient && fact.clientId === currentClient.id) {
-                const readStream: Readable = currentClient.readStream;
+    this.emitter.on('newFact', (fact) => {
+      const currentClient = this.clients.find((client) => client.id === fact.clientId);
 
-                readStream.push(`data: ${JSON.stringify(fact.fact)}\n\n`);
-                this.clients = this.clients.filter((client) => client.id !== fact.clientId);
-                console.log(`Client ${fact.clientId} disconnected`);
-            }
-        });
-    }
+      if (currentClient && fact.clientId === currentClient.id) {
+        const { readStream } = currentClient;
 
-    async sendInfoToClient(){
-        const id = ctx.params.token;
-        const newFact = ctx.request.body;
+        readStream.push(`data: ${JSON.stringify(fact.fact)}\n\n`);
+        this.clients = this.clients.filter((client) => client.id !== fact.clientId);
+        console.log(`Client ${fact.clientId} disconnected`);
+      }
+    });
+  }
 
-        const data = {
-            clientId: id,
-            fact: newFact,
-            counter: 0
-        };
+  private configureHeadersNotExpires(ctx: Context): void {
+    ctx.request.socket.setTimeout(0);
+    ctx.req.socket.setNoDelay(true);
+    ctx.req.socket.setKeepAlive(true);
 
-        ctx.body = newFact;
-        ctx.status = 200;
+    ctx.set({
+      'Content-Type': 'text/event-stream',
+      Connection: 'keep-alive',
+      'Cache-Control': 'no-cache',
+    });
+  }
 
-        this.emitter.emit('newFact', data);
-    }
+  async sendInfoToClient(id: string, clientData: any): Promise<any> {
+    const data = {
+      clientId: id,
+      fact: clientData,
+      counter: 0,
+    };
+
+    this.emitter.emit('newFact', data);
+
+    return {
+      statusCode: 200,
+      body: data,
+    };
+  }
 }
 
 export default SseService;

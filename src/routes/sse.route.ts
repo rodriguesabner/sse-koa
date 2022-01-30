@@ -1,35 +1,35 @@
-import Router from "koa-router";
-import SseController from "../controller/sse.controller";
-import Koa from "koa";
-import {SseInterfaceConstructor} from "../interfaces/sse.interface";
+import Router from 'koa-router';
+import Koa from 'koa';
+import SseController from '../controller/sse.controller';
+import { SseInterfaceConstructor } from '../interfaces/sse.interface';
 
 class SseRoute implements SseInterfaceConstructor {
-    public router: Router;
-    private controller: SseController;
+  public router: Router;
 
-    constructor(readonly app: Koa) {
-        this.controller = new SseController();
-        this.router = new Router({prefix: "/sse"});
-        this.routes();
+  private readonly controller: SseController;
 
-        app.use(this.router.routes());
-        app.use(this.router.allowedMethods());
-    }
+  constructor(readonly app: Koa) {
+    this.controller = new SseController();
+    this.router = new Router({ prefix: '/sse' });
+    this.routes();
 
-    public routes() {
-        this.router.get(
-            "register user by token",
-            "/:token",
-            this.controller.register.bind(this.controller)
-        );
+    app.use(this.router.routes());
+    app.use(this.router.allowedMethods());
+  }
 
-        this.router.post(
-            "send data to registered user (SSE Event)",
-            "/:token",
-            this.controller.getUserInfo.bind(this.controller)
-        );
-    }
+  public routes() {
+    this.router.get(
+      'register user by token',
+      '/:token',
+      this.controller.register.bind(this.controller),
+    );
 
+    this.router.post(
+      'send data to registered user (SSE Event)',
+      '/:token',
+      this.controller.getUserInfo.bind(this.controller),
+    );
+  }
 }
 
 export default SseRoute;
