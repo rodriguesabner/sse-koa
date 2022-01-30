@@ -1,17 +1,21 @@
 import { PassThrough, Readable } from 'stream';
 import { Context } from 'koa';
 import EventEmitter from 'events';
+import SseMapper from '../mapper/sse.mapper';
 
 class SseService {
   private emitter: EventEmitter;
 
+  private readonly sseMapper: SseMapper;
+
   constructor() {
     this.emitter = new EventEmitter();
     this.emitter.setMaxListeners(0);
+    this.sseMapper = new SseMapper();
   }
 
   async registerClient(token: string, ctx: Context): Promise<void> {
-    this.configureHeadersNotExpires(ctx);
+    SseService.configureHeadersNotExpires(ctx);
 
     const stream = new PassThrough();
     const readStream = new Readable();
@@ -20,26 +24,24 @@ class SseService {
     readStream._read = () => {
     };
 
-    ctx.body = readStream
-      .pipe(stream, { end: false });
+    ctx.body = readStream.pipe(stream, { end: false });
 
     const newClient = { id: token, readStream };
-    this.clients.push(newClient);
+    this.sseMapper.push(newClient);
 
     this.emitter.on('newFact', (fact) => {
-      const currentClient = this.clients.find((client) => client.id === fact.clientId);
+      const currentClient = this.sseMapper.find(fact.clientId);
 
       if (currentClient && fact.clientId === currentClient.id) {
         const { readStream } = currentClient;
 
         readStream.push(`data: ${JSON.stringify(fact.fact)}\n\n`);
-        this.clients = this.clients.filter((client) => client.id !== fact.clientId);
-        console.log(`Client ${fact.clientId} disconnected`);
+        this.sseMapper.delete(fact.clientId);
       }
     });
   }
 
-  private configureHeadersNotExpires(ctx: Context): void {
+  private static configureHeadersNotExpires(ctx: Context): void {
     ctx.request.socket.setTimeout(0);
     ctx.req.socket.setNoDelay(true);
     ctx.req.socket.setKeepAlive(true);
