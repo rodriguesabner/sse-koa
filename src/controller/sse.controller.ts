@@ -1,5 +1,4 @@
 import { Context } from 'koa';
-import { PassThrough, Readable } from 'stream';
 import SseService from '../services/sse.service';
 
 class SseController {
@@ -20,26 +19,14 @@ class SseController {
       return;
     }
 
-    const stream = new PassThrough();
-    const readStream = new Readable();
-
-    // eslint-disable-next-line no-underscore-dangle
-    readStream._read = () => {
-    };
-
-    ctx.body = readStream.pipe(stream, { end: false });
-
-    await this.sseService.registerClient(token, readStream, ctx);
+    await this.sseService.registerClient(token, ctx);
   }
 
   async getUserInfo(ctx: Context) {
     const id = ctx.params.token;
     const newFact = ctx.request.body;
 
-    const ret = await this.sseService.sendInfoToClient(id, newFact);
-
-    ctx.body = ret.body;
-    ctx.status = ret.statusCode;
+    await this.sseService.sendInfoToClient(id, newFact, ctx);
   }
 }
 

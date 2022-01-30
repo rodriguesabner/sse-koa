@@ -1,4 +1,4 @@
-import { Readable } from 'stream';
+import { PassThrough, Readable } from 'stream';
 import { Context } from 'koa';
 import EventEmitter from 'events';
 import SseMapper from '../mapper/sse.mapper';
@@ -14,14 +14,30 @@ class SseService {
     this.sseMapper = new SseMapper();
   }
 
-  async registerClient(token: string, readStream: Readable, ctx: Context): Promise<void> {
+  async registerClient(token: string, ctx: Context): Promise<void> {
     SseService.configureHeadersNotExpires(ctx);
 
-    await this.sseMapper.save({
-      // @ts-ignore
-      token,
-      readStream,
-    });
+    const stream = new PassThrough();
+    const readStream = new Readable();
+
+    // eslint-disable-next-line no-underscore-dangle
+    readStream._read = () => {
+    };
+
+    ctx.body = readStream.pipe(stream, { end: false });
+
+    const currentClient = await this.sseMapper.find(token);
+    if (currentClient == null) {
+      const toStore = {
+        token,
+        readStream() {
+          return readStream;
+        },
+      };
+
+      await this.sseMapper.save(toStore);
+    }
+
     await this.configureEventEmmiter();
   }
 
@@ -38,35 +54,35 @@ class SseService {
   }
 
   private async configureEventEmmiter() {
-    this.emitter.on('newFact', async (fact) => {
-      const currentClient = await this.sseMapper.find(fact.clientId);
+    this.emitter.on('newOrder', async (order) => {
+      const currentClient = await this.sseMapper.find(order.clientId);
 
-      if (!currentClient) {
+      if (currentClient == null) {
         return;
       }
 
-      if (fact.clientId === currentClient.id) {
+      if (order.clientId === currentClient.clientId) {
         const { readStream } = currentClient;
+        console.log(readStream);
 
-        readStream.push(`data: ${JSON.stringify(fact.fact)}\n\n`);
-        await this.sseMapper.delete(fact.clientId);
+        // @ts-ignore
+        readStream(`data: ${JSON.stringify(order.order)}\n\n`);
+        await this.sseMapper.delete(order.clientId);
       }
     });
   }
 
-  async sendInfoToClient(id: string, clientData: any): Promise<any> {
+  async sendInfoToClient(id: string, orderData: any, ctx: Context): Promise<any> {
     const data = {
       clientId: id,
-      fact: clientData,
+      order: orderData,
       counter: 0,
     };
 
-    this.emitter.emit('newFact', data);
+    ctx.status = 200;
+    ctx.body = data;
 
-    return {
-      statusCode: 200,
-      body: data,
-    };
+    this.emitter.emit('newOrder', data);
   }
 }
 

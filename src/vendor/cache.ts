@@ -18,7 +18,7 @@ class Cache {
     return value ? JSON.parse(value) : null;
   }
 
-  set(key: string, value: object, timeExp?: string) {
+  set(key: string, value: object, timeExp: number = 60 * 15) {
     return this.redis.set(key, JSON.stringify(value), 'EX', timeExp);
   }
 

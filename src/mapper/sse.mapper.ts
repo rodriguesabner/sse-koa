@@ -1,5 +1,5 @@
-import { Readable } from 'stream';
 import Cache from '../vendor/cache';
+import { SseResponseSendData } from '../interfaces/sse.interface';
 
 class SseMapper {
   private cache: Cache;
@@ -8,23 +8,21 @@ class SseMapper {
     this.cache = new Cache();
   }
 
-  async find({ clientId }: { clientId: string }) {
-    const data = await this.cache.get(clientId);
-    if (data) {
-      return data;
-    }
-    return null;
-  }
-
-  async save({ clientId, readable }: { clientId: string, readable: Readable }) {
-    const data = await this.cache.set(clientId, {
-      clientId,
-      readable,
-    });
+  async find(clientId: string): Promise<SseResponseSendData> {
+    const data = this.cache.get(clientId);
     return data;
   }
 
-  async delete({ clientId }: { clientId: string }) {
+  async save(opts: any) {
+    const data = await this.cache.set(opts.token, {
+      clientId: opts.token,
+      readStream: opts.readStream,
+    });
+
+    return data;
+  }
+
+  async delete(clientId: string) {
     const data = await this.cache.del(clientId);
     return data;
   }
