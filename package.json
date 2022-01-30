@@ -4,20 +4,25 @@
   "main": "index.js",
   "license": "MIT",
   "scripts": {
-    "dev": "ts-node-dev src/index.ts",
+    "dev": "ts-node-dev index.ts",
     "build": "rimraf ./dist && tsc"
   },
   "dependencies": {
     "cors": "^2.8.5",
+    "dotenv": "^14.3.2",
     "express": "^4.17.2",
+    "ioredis": "^4.28.3",
     "koa": "^2.13.4",
     "koa-body": "^4.2.0",
     "koa-combine-routers": "^4.0.2",
+    "koa-compress": "^5.1.0",
     "koa-cors": "^0.0.16",
     "koa-helmet": "^6.1.0",
     "koa-router": "^10.1.1"
   },
   "devDependencies": {
+    "@types/ioredis": "^4.28.7",
+    "@types/koa-compress": "^4.0.3",
     "@types/koa-cors": "^0.0.2",
     "@types/typescript": "^2.0.0",
     "ts-node": "^10.4.0",
