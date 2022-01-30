@@ -8,10 +8,13 @@ class SseService {
 
   private readonly sseMapper: SseMapper;
 
+  private clients: any[];
+
   constructor() {
     this.emitter = new EventEmitter();
     this.emitter.setMaxListeners(0);
     this.sseMapper = new SseMapper();
+    this.clients = [];
   }
 
   async registerClient(token: string, ctx: Context): Promise<void> {
@@ -30,15 +33,14 @@ class SseService {
     if (currentClient == null) {
       const toStore = {
         token,
-        readStream() {
-          return readStream;
-        },
+        readStream,
       };
 
+      this.clients.push(toStore);
       await this.sseMapper.save(toStore);
     }
 
-    await this.configureEventEmmiter();
+    this.configureEventEmitter();
   }
 
   private static configureHeadersNotExpires(ctx: Context): void {
@@ -53,21 +55,26 @@ class SseService {
     });
   }
 
-  private async configureEventEmmiter() {
+  private configureEventEmitter() {
     this.emitter.on('newOrder', async (order) => {
-      const currentClient = await this.sseMapper.find(order.clientId);
+      const redisCurrentClient = await this.sseMapper.find(order.clientId);
+      const currentClientLocal = this.clients.find(
+        (client) => client.token === order.clientId,
+      );
 
-      if (currentClient == null) {
+      if (redisCurrentClient == null) {
         return;
       }
 
-      if (order.clientId === currentClient.clientId) {
-        const { readStream } = currentClient;
-        console.log(readStream);
-
-        // @ts-ignore
-        readStream(`data: ${JSON.stringify(order.order)}\n\n`);
-        await this.sseMapper.delete(order.clientId);
+      if (order.clientId === redisCurrentClient.clientId) {
+        try {
+          // @ts-ignore
+          redisCurrentClient.readStream.push(`data: ${JSON.stringify(order.order)}\n\n`);
+        } catch (error) {
+          currentClientLocal.readStream.push(`data: ${JSON.stringify(order.order)}\n\n`);
+        } finally {
+          await this.sseMapper.delete(order.clientId);
+        }
       }
     });
   }
