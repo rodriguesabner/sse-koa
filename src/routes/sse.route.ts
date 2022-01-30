@@ -18,14 +18,14 @@ class SseRoute implements SseInterfaceConstructor {
   }
 
   public routes() {
-    this.router.get(
-      'register user by token',
-      '/:token',
+    this.router.post(
+      'Register user by token',
+      '/register/:token',
       this.controller.register.bind(this.controller),
     );
 
     this.router.post(
-      'send data to registered user (SSE Event)',
+      'Send data to registered user (SSE Event)',
       '/:token',
       this.controller.getUserInfo.bind(this.controller),
     );
